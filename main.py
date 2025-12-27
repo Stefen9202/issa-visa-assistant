@@ -8,7 +8,8 @@ from supabase import create_client, Client
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  
+# Professional CORS setup to ensure your frontend can always talk to this backend
+CORS(app, resources={r"/*": {"origins": "*"}})  
 
 # Initialize Clients
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -21,6 +22,16 @@ def get_system_prompt():
         return response.data[0]['content'] if response.data else "You are a friendly visa consultant 🧭"
     except Exception:
         return "You are a friendly visa consultant 🧭"
+
+# --- NEW: FIX FOR THE 404 ERROR ---
+@app.route('/')
+def home():
+    """Professional landing page so Aaron doesn't see a 404."""
+    return jsonify({
+        "status": "online",
+        "message": "Issa Assistant Backend is Live! 🧭✨",
+        "vibe": "Main Character Mode Activated 🇦🇺"
+    }), 200
 
 @app.route('/get-sessions', methods=['GET'])
 def get_sessions():
@@ -54,9 +65,6 @@ def generate_reply():
         learning_triggers = ["no", "actually", "wrong", "correct", "2000", "instead", "is", "price"]
         
         if any(word in client_sequence.lower() for word in learning_triggers) and len(chat_history) > 0:
-            last_ai_reply = chat_history[-1]['content']
-            
-            # This prompt now FORCES a template that the AI cannot break
             editor_prompt = (
                 f"CURRENT SYSTEM PROMPT: {system_prompt}\n"
                 f"NEW FACT TO LEARN: {client_sequence}\n\n"
@@ -92,7 +100,7 @@ def generate_reply():
         response = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile", 
             messages=messages, 
-            temperature=0.9 # Increased temperature for more emojis/personality
+            temperature=0.9 
         )
         ai_reply = response.choices[0].message.content
 
@@ -105,4 +113,6 @@ def generate_reply():
         return jsonify({"aiReply": "I'm refreshing my memory... 🇦🇺"}), 200
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Use Railway's port if available, otherwise default to 5000
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
